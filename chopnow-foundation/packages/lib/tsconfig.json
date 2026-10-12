@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "@chopnow/types": ["../types/src/index.ts"],
+      "@chopnow/types/*": ["../types/src/*"]
+    }
+  },
+  "include": ["src"]
+}
