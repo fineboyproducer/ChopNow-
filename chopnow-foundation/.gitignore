@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js build output
+.next/
+out/
+build/
+dist/
+
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# Environment variables (never commit real secrets)
+.env
+.env*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor/OS
+.DS_Store
+*.pem
+.vscode/
+.idea/
+
+# Vercel
+.vercel
+
+# Supabase local dev
+.supabase/
+
+# Misc
+*.log
+coverage/
