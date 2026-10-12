@@ -85,7 +85,7 @@ export async function signUpAction(_prevState: unknown, formData: FormData): Pro
       password: parsed.data.password,
       options: {
         data: { full_name: parsed.data.fullName, phone: parsed.data.phone },
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_WEB_APP_URL ?? 'https://chopnow-delta.vercel.app'}/auth/callback`,
+        emailRedirectTo: "https://chopnow-delta.vercel.app/auth/callback",
 
       },
     });
