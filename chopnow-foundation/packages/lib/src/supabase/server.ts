@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import type { Database } from "./database.generated";
+import { getSupabaseUrl, getSupabaseAnonKey, getSupabaseServiceRoleKey } from "./env";
 
 /**
  * Minimal cookie store contract this factory needs. In Next.js App Router,
@@ -23,15 +24,8 @@ export interface ServerCookieStore {
  *   const supabase = createSupabaseServerClient(cookies());
  */
 export function createSupabaseServerClient(cookieStore: ServerCookieStore) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !anonKey) {
-    throw new Error(
-      "Missing Supabase environment variables. Ensure NEXT_PUBLIC_SUPABASE_URL and " +
-        "NEXT_PUBLIC_SUPABASE_ANON_KEY are set (see .env.example).",
-    );
-  }
+  const url = getSupabaseUrl();
+  const anonKey = getSupabaseAnonKey();
 
   return createServerClient<Database>(url, anonKey, {
     cookies: {
@@ -61,15 +55,8 @@ export function createSupabaseServerClient(cookieStore: ServerCookieStore) {
  * checks. Never import this into anything that ships to the client bundle.
  */
 export function createSupabaseServiceRoleClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!url || !serviceRoleKey) {
-    throw new Error(
-      "Missing Supabase service role environment variables. Ensure NEXT_PUBLIC_SUPABASE_URL " +
-        "and SUPABASE_SERVICE_ROLE_KEY are set. This client must only be used server-side.",
-    );
-  }
+  const url = getSupabaseUrl();
+  const serviceRoleKey = getSupabaseServiceRoleKey();
 
   return createServerClient<Database>(url, serviceRoleKey, {
     cookies: {
