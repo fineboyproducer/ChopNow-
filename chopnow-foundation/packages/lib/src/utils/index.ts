@@ -7,3 +7,4 @@ export * from "./date";
 export * from "./distance";
 export * from "./eta";
 export * from "./cn";
+export * from "./app-url";

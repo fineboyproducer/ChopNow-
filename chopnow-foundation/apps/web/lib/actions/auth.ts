@@ -9,6 +9,7 @@ import {
   signUpSchema,
   toAppError,
   createLogger,
+  getAppUrl,
 } from "@chopnow/lib";
 import type { ApiResponse } from "@chopnow/types";
 
@@ -85,8 +86,7 @@ export async function signUpAction(_prevState: unknown, formData: FormData): Pro
       password: parsed.data.password,
       options: {
         data: { full_name: parsed.data.fullName, phone: parsed.data.phone },
-        emailRedirectTo: "https://chopnow-delta.vercel.app/auth/callback",
-
+        emailRedirectTo: `${getAppUrl("web")}/auth/callback`,
       },
     });
 

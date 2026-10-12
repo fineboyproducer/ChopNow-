@@ -1,4 +1,4 @@
-import { AppError, createLogger } from "@chopnow/lib";
+import { AppError, createLogger, getAppUrl } from "@chopnow/lib";
 
 const log = createLogger("paystack");
 
@@ -43,7 +43,7 @@ export async function initializePaystackTransaction(
     );
   }
 
-  const callbackUrl = `${process.env.NEXT_PUBLIC_WEB_APP_URL}/checkout/confirming?order=${input.orderId}`;
+  const callbackUrl = `${getAppUrl("web")}/checkout/confirming?order=${input.orderId}`;
 
   let response: Response;
   try {
