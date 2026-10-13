@@ -31,6 +31,22 @@ export async function getAuthenticatedUser(
     // trigger that creates one hasn't run, or ran into an error). Treat
     // this as "authenticated but unprovisioned" rather than throwing —
     // callers can redirect to an onboarding step instead of crashing.
+    //
+    // Logged deliberately (not swallowed) — a user with a *real* profiles
+    // row still hitting this branch (confirmed via Supabase Table Editor)
+    // means the SELECT itself is failing, most likely RLS rejecting the
+    // request because auth.uid() isn't resolving inside this query even
+    // though supabase.auth.getUser() above succeeded. The error's code/
+    // message (e.g. an RLS/PGRST permission code vs. PGRST116 "no rows
+    // found") is the one thing that can actually distinguish those cases
+    // from here, and is otherwise invisible to anyone looking at the app.
+    console.error("[getAuthenticatedUser] profile lookup failed for authenticated user", {
+      userId: user.id,
+      errorCode: profileError?.code,
+      errorMessage: profileError?.message,
+      errorDetails: profileError?.details,
+      errorHint: profileError?.hint,
+    });
     return { id: user.id, email: user.email ?? null, phone: user.phone ?? null, profile: null };
   }
 
