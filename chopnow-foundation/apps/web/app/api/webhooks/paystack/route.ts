@@ -95,6 +95,46 @@ async function handleChargeSuccess(
   }).catch((err) => log.error("Confirmation email failed (non-fatal)", err, { orderId: order.id }));
 }
 
+/**
+ * Relays a webhook event this app doesn't own to another Paystack
+ * webhook consumer on the same Paystack account. Paystack's classic
+ * dashboard only accepts one webhook URL per environment, and this
+ * account already has one in use for an unrelated WooCommerce store
+ * (fineboyproducer.com) — so instead of that URL being overwritten
+ * (which would silently break WooCommerce's payment confirmations),
+ * ChopNow's URL is configured as the one Paystack calls, and anything
+ * that isn't a ChopNow event is forwarded here, unchanged, to the
+ * original destination.
+ *
+ * Forwards the exact raw body and the exact x-paystack-signature header
+ * Paystack sent — never re-signs or re-serializes — so the receiving
+ * app's own signature verification (computed against that same shared
+ * account secret) still passes on its end.
+ */
+async function relayToOtherWebhookConsumer(rawBody: string, signature: string | null) {
+  const relayUrl = process.env.PAYSTACK_WEBHOOK_RELAY_URL;
+  if (!relayUrl) return;
+
+  try {
+    const response = await fetch(relayUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(signature ? { "x-paystack-signature": signature } : {}),
+      },
+      body: rawBody,
+    });
+    log.info("Relayed non-ChopNow webhook event", { relayUrl, status: response.status });
+  } catch (err) {
+    // The relay target being unreachable is the relay target's problem to
+    // notice and fix, not a reason to fail this request — Paystack only
+    // needs a 200 from the URL it actually called (this one) to stop
+    // retrying, and there is nothing ChopNow itself needs to do with an
+    // event that was never its own.
+    log.error("Failed to relay non-ChopNow webhook event (non-fatal)", err, { relayUrl });
+  }
+}
+
 async function handleChargeFailed(
   supabase: ReturnType<typeof createSupabaseServiceRoleClient>,
   event: PaystackWebhookEvent,
@@ -121,17 +161,26 @@ async function handleChargeFailed(
  *      x-paystack-signature header against an HMAC-SHA512 of the raw
  *      request body, using the webhook secret. Requests that fail this
  *      check are rejected with 401 and never touch the database.
- *   2. On a genuine "charge.success" event, looks up the order by the
+ *   2. Checks whether the event is actually ChopNow's: Paystack's classic
+ *      dashboard allows only one webhook URL per environment, and this
+ *      account's URL is also relied on by an unrelated WooCommerce store
+ *      (fineboyproducer.com). Rather than overwrite that URL — which
+ *      would silently break WooCommerce's payment confirmations — this
+ *      URL is the one Paystack calls for the whole account, and anything
+ *      without ChopNow's own metadata.order_id is forwarded unchanged to
+ *      that other consumer (see relayToOtherWebhookConsumer above) and
+ *      never touches ChopNow's database.
+ *   3. On a genuine "charge.success" event, looks up the order by the
  *      payment reference and moves it from `new` -> `payment_confirmed`
  *      -> `restaurant_notified` (the notification step itself is a
  *      placeholder here — see Section 9's restaurant communication
  *      workflow / the Ops Center architecture for the actual WhatsApp
  *      dispatch, which is out of scope for this sprint).
- *   3. Is idempotent: Paystack may deliver the same webhook more than
+ *   4. Is idempotent: Paystack may deliver the same webhook more than
  *      once, so this checks the order's current payment_status before
  *      writing, and does nothing if it's already "paid" (see PRD
  *      Section 10, "Duplicate Payment" handling).
- *   4. On "charge.failed", marks payment_status "failed" so the
+ *   5. On "charge.failed", marks payment_status "failed" so the
  *      customer-facing confirming page can show a retry option instead
  *      of hanging indefinitely.
  *
@@ -152,6 +201,21 @@ export async function POST(request: NextRequest) {
     event = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  // ChopNow sets metadata.order_id on every transaction it initializes
+  // (see lib/payments/paystack.ts) — its presence is how a ChopNow event
+  // is told apart from anything else arriving at this shared account's
+  // one webhook URL (see relayToOtherWebhookConsumer above).
+  const isChopNowEvent = Boolean(event.data?.metadata?.order_id);
+
+  if (!isChopNowEvent) {
+    log.info("Webhook event has no ChopNow order_id metadata — relaying, not processing here", {
+      type: event.event,
+      reference: event.data?.reference,
+    });
+    await relayToOtherWebhookConsumer(rawBody, signature);
+    return NextResponse.json({ received: true });
   }
 
   const supabase = createSupabaseServiceRoleClient();
