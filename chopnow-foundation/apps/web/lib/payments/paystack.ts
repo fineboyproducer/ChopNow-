@@ -56,6 +56,7 @@ export async function initializePaystackTransaction(
       body: JSON.stringify({
         email: input.email,
         amount: input.amountKobo,
+        currency: "NGN",
         reference: input.reference,
         callback_url: callbackUrl,
         metadata: {
