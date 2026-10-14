@@ -66,7 +66,7 @@ export default async function PipelinePage() {
   const riderNameById = new Map<string, string>((riderProfiles ?? []).map((p) => [p.id, p.full_name ?? "Rider"]));
 
   return (
-    <div className="space-y-5 p-6">
+    <div className="space-y-5 p-4 sm:p-6">
       <div>
         <h1 className="text-lg font-extrabold text-foreground">Order Pipeline</h1>
         <p className="text-[12px] text-muted-foreground">

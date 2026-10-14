@@ -51,7 +51,7 @@ function StatCard({
       <div className={`mb-3 flex h-9 w-9 items-center justify-center rounded-lg ${toneClasses}`}>
         <Icon size={16} />
       </div>
-      <p className="text-2xl font-black tracking-tight text-foreground">{value}</p>
+      <p className="break-words text-xl font-black tracking-tight text-foreground sm:text-2xl">{value}</p>
       <p className="mt-0.5 text-[11px] text-muted-foreground">{label}</p>
     </Card>
   );
@@ -65,8 +65,8 @@ export default async function DashboardPage() {
   ]);
 
   return (
-    <div className="space-y-5 p-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5 p-4 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-lg font-extrabold text-foreground">Live Operations</h1>
           <p className="text-[12px] text-muted-foreground">Real-time overview of ChopNow&apos;s operations</p>
@@ -116,10 +116,10 @@ export default async function DashboardPage() {
                   <Link
                     key={order.id}
                     href={`/orders?highlight=${order.id}`}
-                    className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:bg-muted"
+                    className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted"
                   >
-                    <div>
-                      <p className="text-[13px] font-bold text-foreground">
+                    <div className="min-w-0">
+                      <p className="break-words text-[13px] font-bold text-foreground">
                         {order.orderNumber} <span className="font-normal text-muted-foreground">· {order.restaurantName}</span>
                       </p>
                       <p className="text-[11px] text-muted-foreground">{formatTime(order.createdAt)}</p>
@@ -163,7 +163,7 @@ export default async function DashboardPage() {
           </Card>
         </div>
 
-        <div style={{ height: 620 }}>
+        <div className="h-[420px] sm:h-[620px]">
           <LiveActivityFeed initialEvents={recentActivity} />
         </div>
       </div>

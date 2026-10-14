@@ -25,7 +25,7 @@ export default async function CustomersPage({
   const customers = customerRows ?? [];
 
   return (
-    <div className="space-y-5 p-6">
+    <div className="space-y-5 p-4 sm:p-6">
       <div>
         <h1 className="text-lg font-extrabold text-foreground">Customers</h1>
         <p className="text-[12px] text-muted-foreground">Search by name or phone number</p>

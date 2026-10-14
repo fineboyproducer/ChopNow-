@@ -107,7 +107,7 @@ export function DispatchClient({ orderCandidates }: { orderCandidates: OrderCand
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[280px_1fr]">
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[280px_1fr]">
       <Card className="h-fit p-3">
         <p className="mb-2 px-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
           Awaiting dispatch ({orderCandidates.length})

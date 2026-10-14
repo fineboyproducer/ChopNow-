@@ -76,7 +76,7 @@ export default async function AnalyticsPage() {
   const maxDailyRevenue = Math.max(...revenueByDay.values(), 1);
 
   return (
-    <div className="space-y-5 p-6">
+    <div className="space-y-5 p-4 sm:p-6">
       <div>
         <h1 className="text-lg font-extrabold text-foreground">Analytics</h1>
         <p className="text-[12px] text-muted-foreground">Last 30 days, computed from real order data</p>

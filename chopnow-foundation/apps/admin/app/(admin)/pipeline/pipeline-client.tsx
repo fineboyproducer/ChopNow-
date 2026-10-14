@@ -96,22 +96,25 @@ function PipelineOrderRow({
 
   return (
     <Card className={cn("overflow-hidden", isDelayed && "border-destructive/40")}>
-      <button onClick={onToggle} className="flex w-full items-center gap-3 px-4 py-3 text-left">
+      <button onClick={onToggle} className="flex w-full items-center gap-2 px-3 py-3 text-left sm:gap-3 sm:px-4">
         <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", isDelayed ? "bg-destructive/10" : "bg-accent")}>
           <stage.icon size={15} className={isDelayed ? "text-destructive" : "text-primary"} />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
             <span className="text-[13px] font-bold text-foreground">{data.order.order_number}</span>
-            <span className="text-[11.5px] text-muted-foreground">{data.restaurantName}</span>
+            <span className="max-w-full truncate text-[11.5px] text-muted-foreground">{data.restaurantName}</span>
             {isDelayed && (
               <span className="flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[9.5px] font-bold text-destructive">
                 <AlertTriangle size={9} /> Delayed
               </span>
             )}
           </div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="truncate text-[11px] text-muted-foreground">
             {stage.label} · handled by {handler}
+          </p>
+          <p className={cn("text-[11px] font-bold sm:hidden", isDelayed ? "text-destructive" : "text-muted-foreground")}>
+            {formatDuration(secInStage)} in stage
           </p>
         </div>
         <div className="hidden text-right sm:block">
@@ -125,7 +128,7 @@ function PipelineOrderRow({
       </button>
 
       {expanded && (
-        <div className="border-t border-border px-4 pb-4 pt-3">
+        <div className="border-t border-border px-3 pb-4 pt-3 sm:px-4">
           <div className="mb-3 flex items-center gap-0.5 overflow-x-auto pb-1">
             {STAGES.map((s, i) => (
               <div key={s.key} className="flex shrink-0 items-center">
@@ -230,7 +233,7 @@ export function PipelineClient({
             key={f.id}
             onClick={() => setFilter(f.id)}
             className={cn(
-              "rounded-lg px-3 py-1.5 text-[11.5px] font-bold transition-colors",
+              "min-h-9 rounded-lg px-3 py-1.5 text-[11.5px] font-bold transition-colors",
               filter === f.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
             )}
           >

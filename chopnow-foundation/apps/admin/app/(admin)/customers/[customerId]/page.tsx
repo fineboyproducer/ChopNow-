@@ -54,7 +54,7 @@ export default async function CustomerDetailPage({
   const { data: addressRows } = await supabase.from("addresses").select("*").eq("user_id", customerId);
 
   return (
-    <div className="mx-auto max-w-2xl space-y-5 p-6">
+    <div className="mx-auto max-w-2xl space-y-5 p-4 sm:p-6">
       <Link href="/customers" className="flex items-center gap-1.5 text-[13px] font-bold text-muted-foreground">
         <ChevronLeft size={16} /> Back to customers
       </Link>
@@ -67,16 +67,16 @@ export default async function CustomerDetailPage({
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <Card className="p-4 text-center">
-          <p className="text-lg font-black text-foreground">{orders.length}</p>
+        <Card className="p-3 text-center sm:p-4">
+          <p className="break-words text-base font-black text-foreground sm:text-lg">{orders.length}</p>
           <p className="text-[11px] text-muted-foreground">Total orders</p>
         </Card>
-        <Card className="p-4 text-center">
-          <p className="text-lg font-black text-foreground">{formatNaira(totalSpent)}</p>
+        <Card className="p-3 text-center sm:p-4">
+          <p className="break-words text-base font-black text-foreground sm:text-lg">{formatNaira(totalSpent)}</p>
           <p className="text-[11px] text-muted-foreground">Lifetime spend</p>
         </Card>
-        <Card className="p-4 text-center">
-          <p className="text-lg font-black text-foreground">{addressRows?.length ?? 0}</p>
+        <Card className="p-3 text-center sm:p-4">
+          <p className="break-words text-base font-black text-foreground sm:text-lg">{addressRows?.length ?? 0}</p>
           <p className="text-[11px] text-muted-foreground">Saved addresses</p>
         </Card>
       </div>

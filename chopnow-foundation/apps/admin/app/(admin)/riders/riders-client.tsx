@@ -130,13 +130,13 @@ export function RidersClient({ riders }: { riders: RiderCardData[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {(["all", "online", "offline"] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
             className={cn(
-              "rounded-lg px-3 py-1.5 text-[11.5px] font-bold capitalize transition-colors",
+              "min-h-9 rounded-lg px-3 py-1.5 text-[11.5px] font-bold capitalize transition-colors",
               filter === f ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
             )}
           >

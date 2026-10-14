@@ -78,8 +78,8 @@ function OrderRowCard({ order, restaurantName }: { order: OrderRow; restaurantNa
   return (
     <Card className="p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="text-[13px] font-bold text-foreground">
+        <div className="min-w-0">
+          <p className="break-words text-[13px] font-bold text-foreground">
             {order.order_number} <span className="font-normal text-muted-foreground">· {restaurantName}</span>
           </p>
           <p className="text-[11px] text-muted-foreground">{formatDateTime(order.created_at)}</p>
@@ -104,7 +104,7 @@ function OrderRowCard({ order, restaurantName }: { order: OrderRow; restaurantNa
       {error && <p className="mt-2 text-[11.5px] font-medium text-destructive">{error}</p>}
 
       {(canAdvance || canCancel) && (
-        <div className="mt-3 flex gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           {canAdvance && (
             <Button size="sm" variant="ghost" onClick={handleAdvance} disabled={busy}>
               <ArrowRight size={12} /> Advance stage
@@ -140,13 +140,13 @@ export function OrdersListClient({
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <button
             key={f.id}
             onClick={() => setFilter(f.id)}
             className={cn(
-              "rounded-lg px-3 py-1.5 text-[11.5px] font-bold transition-colors",
+              "min-h-9 rounded-lg px-3 py-1.5 text-[11.5px] font-bold transition-colors",
               filter === f.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
             )}
           >

@@ -15,7 +15,7 @@ export default async function MenusIndexPage() {
   const restaurants = restaurantRows ?? [];
 
   return (
-    <div className="space-y-5 p-6">
+    <div className="space-y-5 p-4 sm:p-6">
       <div>
         <h1 className="text-lg font-extrabold text-foreground">Menus</h1>
         <p className="text-[12px] text-muted-foreground">Choose a restaurant to manage its menu.</p>

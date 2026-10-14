@@ -19,7 +19,7 @@ export default async function RestaurantsPage() {
   const restaurants = (restaurantRows ?? []) as RestaurantRow[];
 
   return (
-    <div className="space-y-5 p-6">
+    <div className="space-y-5 p-4 sm:p-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-extrabold text-foreground">Restaurants</h1>
@@ -55,7 +55,7 @@ export default async function RestaurantsPage() {
                   <img src={r.logo_url} alt="" className="h-12 w-12 shrink-0 rounded-xl object-cover" />
                 )}
                 <div className="min-w-0 flex-1">
-                  <Link href={`/restaurants/${r.id}`} className="text-[14px] font-bold text-foreground hover:underline">
+                  <Link href={`/restaurants/${r.id}`} className="break-words text-[14px] font-bold text-foreground hover:underline">
                     {r.name}
                   </Link>
                   <p className="text-[11px] text-muted-foreground">{r.category ?? "Uncategorized"}</p>

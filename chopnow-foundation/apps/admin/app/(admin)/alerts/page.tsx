@@ -23,7 +23,7 @@ export default async function AlertsPage() {
   ]);
 
   return (
-    <div className="space-y-5 p-6">
+    <div className="space-y-5 p-4 sm:p-6">
       <div>
         <h1 className="text-lg font-extrabold text-foreground">Alerts</h1>
         <p className="text-[12px] text-muted-foreground">

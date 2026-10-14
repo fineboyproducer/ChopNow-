@@ -18,7 +18,7 @@ export default async function SettingsPage() {
   const currentMarkup = markupSetting ? Number(markupSetting.value) : 8;
 
   return (
-    <div className="mx-auto max-w-xl space-y-5 p-6">
+    <div className="mx-auto max-w-xl space-y-5 p-4 sm:p-6">
       <div>
         <h1 className="text-lg font-extrabold text-foreground">Settings</h1>
         <p className="text-[12px] text-muted-foreground">Platform-wide configuration</p>

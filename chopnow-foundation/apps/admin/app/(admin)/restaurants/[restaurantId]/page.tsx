@@ -50,7 +50,7 @@ export default async function RestaurantDetailPage({
     .eq("restaurant_id", restaurantId);
 
   return (
-    <div className="mx-auto max-w-2xl space-y-5 p-6">
+    <div className="mx-auto max-w-2xl space-y-5 p-4 sm:p-6">
       <Link href="/restaurants" className="flex items-center gap-1.5 text-[13px] font-bold text-muted-foreground">
         <ChevronLeft size={16} /> Back to restaurants
       </Link>

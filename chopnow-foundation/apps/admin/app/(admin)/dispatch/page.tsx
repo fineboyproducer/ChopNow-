@@ -82,7 +82,7 @@ export default async function DispatchPage() {
   });
 
   return (
-    <div className="space-y-5 p-6">
+    <div className="space-y-5 p-4 sm:p-6">
       <div>
         <h1 className="text-lg font-extrabold text-foreground">Dispatch</h1>
         <p className="text-[12px] text-muted-foreground">
