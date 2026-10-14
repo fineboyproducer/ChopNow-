@@ -3,9 +3,18 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient, getAuthenticatedUser, requireRole, toAppError, AppError, createLogger } from "@chopnow/lib";
-import type { ApiResponse } from "@chopnow/types";
+import type { ApiResponse, OrderStatus } from "@chopnow/types";
 
 const log = createLogger("admin-rider-actions");
+
+// Statuses an order must currently be in for a rider to be (re)assigned to
+// it. Mirrors DISPATCHABLE_STATUSES in
+// app/(admin)/dispatch/page.tsx — keep both lists in sync if the
+// dispatch pipeline's eligible stages ever change. "rider_assigned" is
+// included (not just "ready_for_pickup") because reassignRiderAction
+// below calls this same function to swap an order's rider without first
+// moving the order out of rider_assigned.
+const RIDER_ASSIGNABLE_STATUSES: OrderStatus[] = ["ready_for_pickup", "rider_assigned"];
 
 async function getClientAndStaff() {
   const cookieStore = await cookies();
@@ -52,6 +61,12 @@ export async function assignRiderToOrderAction(orderId: string, riderId: string)
 
     if (orderError || !order) throw AppError.notFound("Order not found.");
 
+    if (!RIDER_ASSIGNABLE_STATUSES.includes(order.status as OrderStatus)) {
+      throw AppError.conflict(
+        `This order is "${order.status}" and can no longer be assigned a rider. Only orders ready for pickup (or already assigned, for reassignment) are eligible.`,
+      );
+    }
+
     const { data: rider, error: riderError } = await supabase
       .from("riders")
       .select("id, is_online, is_active")
@@ -61,11 +76,28 @@ export async function assignRiderToOrderAction(orderId: string, riderId: string)
     if (riderError || !rider) throw AppError.notFound("Rider not found.");
     if (!rider.is_active) throw AppError.conflict("This rider account is deactivated.");
 
-    const { error: updateOrderError } = await supabase
+    // Re-validate eligibility atomically at write time, not just at the
+    // SELECT above: between that read and this write, another admin could
+    // cancel the order, or it could auto-advance past ready_for_pickup,
+    // making the status check above stale (a classic check-then-act
+    // race). Scoping the UPDATE's own WHERE clause to the same eligible
+    // statuses means the write itself only succeeds if the order is
+    // *still* eligible the instant it runs — if a concurrent change beat
+    // us to it, this matches zero rows and updatedOrder comes back null,
+    // which is treated as a conflict rather than silently doing nothing.
+    const { data: updatedOrder, error: updateOrderError } = await supabase
       .from("orders")
       .update({ rider_id: riderId, status: "rider_assigned" })
-      .eq("id", orderId);
+      .eq("id", orderId)
+      .in("status", RIDER_ASSIGNABLE_STATUSES)
+      .select("id")
+      .maybeSingle();
     if (updateOrderError) throw toAppError(updateOrderError);
+    if (!updatedOrder) {
+      throw AppError.conflict(
+        "This order's status changed just now and is no longer eligible for rider assignment. Please refresh and try again.",
+      );
+    }
 
     const { error: updateRiderError } = await supabase.from("riders").update({ status: "assigned" }).eq("id", riderId);
     if (updateRiderError) throw toAppError(updateRiderError);
