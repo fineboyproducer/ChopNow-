@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ChefHat, ShoppingBag, User } from "lucide-react";
-import { Navbar, ThemeToggle, Button } from "@chopnow/ui";
+import { ShoppingBag, User } from "lucide-react";
+import { Navbar, ThemeToggle, Button, Logo } from "@chopnow/ui";
 import { useCart } from "@/lib/cart/cart-context";
 import { CartDrawer } from "./cart-drawer";
 import * as React from "react";
@@ -16,13 +16,8 @@ export function CustomerNavbar() {
       <Navbar
         elevated
         brand={
-          <Link href="/home" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_6px_14px_-4px_hsl(var(--primary)/0.5)]">
-              <ChefHat size={18} strokeWidth={2.4} />
-            </div>
-            <span className="text-lg font-extrabold tracking-tight text-foreground">
-              Chop<span className="text-primary">Now</span>
-            </span>
+          <Link href="/home" aria-label="ChopNow home">
+            <Logo size={30} />
           </Link>
         }
         center={

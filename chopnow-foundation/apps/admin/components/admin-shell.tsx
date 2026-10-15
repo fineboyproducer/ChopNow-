@@ -5,11 +5,11 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, Store, UtensilsCrossed, Users, Receipt, BarChart3, Settings, LogOut, ChefHat,
+  LayoutDashboard, Store, UtensilsCrossed, Users, Receipt, BarChart3, Settings, LogOut,
   GitBranch, Radar, Bike, AlertTriangle, Menu,
 } from "lucide-react";
 import {
-  Sidebar, ThemeToggle, Drawer, DrawerContent, DrawerTitle, DrawerTrigger, type SidebarItem,
+  Logo, Sidebar, ThemeToggle, Drawer, DrawerContent, DrawerTitle, DrawerTrigger, type SidebarItem,
 } from "@chopnow/ui";
 import { signOutAction } from "@/lib/actions/auth";
 
@@ -27,17 +27,7 @@ const NAV_ITEMS: SidebarItem[] = [
   { id: "settings", label: "Settings", icon: Settings, href: "/settings" },
 ];
 
-const BRAND = (
-  <>
-    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-      <ChefHat size={14} />
-    </div>
-    <div>
-      <p className="text-[13px] font-extrabold leading-none text-foreground">ChopNow</p>
-      <p className="mt-0.5 text-[9px] leading-none text-muted-foreground">Admin</p>
-    </div>
-  </>
-);
+const BRAND = <Logo size={26} badge="Admin" />;
 
 const SIGN_OUT = (
   <form action={signOutAction}>

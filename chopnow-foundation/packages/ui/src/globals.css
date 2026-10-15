@@ -15,18 +15,18 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 220 26% 18%;
+    --foreground: 215 28% 17%; /* brand charcoal #1F2937 */
 
     --card: 0 0% 100%;
-    --card-foreground: 220 26% 18%;
+    --card-foreground: 215 28% 17%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 26% 18%;
+    --popover-foreground: 215 28% 17%;
 
-    --primary: 24 100% 50%;
+    --primary: 25 100% 50%; /* brand orange #FF6B00 */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 26% 18%;
+    --secondary: 215 28% 17%;
     --secondary-foreground: 0 0% 100%;
 
     --muted: 40 20% 97%;
@@ -38,7 +38,7 @@
     --destructive: 4 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 69% 49%;
+    --success: 142 71% 45%; /* brand green #22C55E */
     --success-foreground: 0 0% 100%;
 
     --warning: 36 89% 57%;
@@ -49,7 +49,7 @@
 
     --border: 40 14% 93%;
     --input: 40 14% 90%;
-    --ring: 24 100% 50%;
+    --ring: 25 100% 50%;
 
     --radius: 1rem;
   }
@@ -64,7 +64,7 @@
     --popover: 205 22% 9%;
     --popover-foreground: 210 17% 90%;
 
-    --primary: 24 100% 50%;
+    --primary: 25 100% 50%;
     --primary-foreground: 200 27% 6%;
 
     --secondary: 210 17% 90%;
@@ -90,7 +90,7 @@
 
     --border: 210 17% 16%;
     --input: 210 17% 18%;
-    --ring: 24 100% 50%;
+    --ring: 25 100% 50%;
 
     --radius: 1rem;
   }

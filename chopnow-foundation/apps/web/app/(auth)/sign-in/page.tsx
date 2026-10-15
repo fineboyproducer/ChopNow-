@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Logo } from "@chopnow/ui";
 import { SignInForm } from "./sign-in-form";
 
 export const metadata: Metadata = { title: "Sign in" };
@@ -16,9 +17,7 @@ export default async function SignInPage({
     <div className="flex min-h-screen items-center justify-center bg-accent px-5 py-10">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-lg font-black text-primary-foreground">
-            C
-          </div>
+          <Logo size={44} tagline className="mx-auto mb-5 flex-col" />
           <h1 className="text-xl font-extrabold tracking-tight text-foreground">Welcome back</h1>
           <p className="mt-1 text-sm text-muted-foreground">Sign in to order from ChopNow.</p>
         </div>

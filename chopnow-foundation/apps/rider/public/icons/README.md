@@ -1,13 +1,8 @@
-# Icon assets needed
+# App icons
 
-This directory needs three real PNG icons before the PWA manifest is
-fully functional (installability works without them in most browsers,
-but the install prompt/home-screen icon will look wrong):
+Generated from the ChopNow bowl mark (`packages/ui/src/brand/mark-path.ts`):
 
-- icon-192.png (192x192, any purpose)
-- icon-512.png (512x512, any purpose)
-- icon-maskable-512.png (512x512, maskable — safe-zone padding for
-  Android's adaptive icon masks)
+- icon-192.png / icon-512.png: orange rounded tile, white mark (any purpose)
+- icon-maskable-512.png: full-bleed orange with the mark inside Android's safe zone (maskable)
 
-Generate these from the ChopNow logo mark using any PWA icon generator,
-e.g. https://realfavicongenerator.net or `npx pwa-asset-generator`.
+If the mark artwork is replaced, regenerate these from it.
