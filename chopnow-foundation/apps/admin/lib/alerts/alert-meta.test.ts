@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { applyAlertChange, getAlertState, type AlertRow } from "./alert-meta";
+import { applyAlertChange, getAlertState, getAlertTitle, type AlertRow } from "./alert-meta";
 
 const alert = (over: Partial<AlertRow> = {}): AlertRow => ({
   id: "a1", type: "restaurant_delay", severity: "amber", message: "m", order_id: "o1",
   restaurant_id: null, rider_id: null, created_at: "2026-10-15T08:00:00Z",
-  resolved_at: null, resolved_by: null, incident_key: "stage:preparing:1", ...over,
+  resolved_at: null, resolved_by: null, incident_key: "stage:preparing:1", title: "Preparation taking longer", ...over,
 });
 
 describe("getAlertState", () => {
@@ -12,6 +12,14 @@ describe("getAlertState", () => {
     expect(getAlertState(alert())).toBe("active");
     expect(getAlertState(alert({ resolved_at: "2026-10-15T09:00:00Z" }))).toBe("auto_resolved");
     expect(getAlertState(alert({ resolved_at: "2026-10-15T09:00:00Z", resolved_by: "u1" }))).toBe("resolved_by_staff");
+  });
+});
+
+describe("getAlertTitle", () => {
+  it("prefers the generator's headline and falls back to the category label", () => {
+    expect(getAlertTitle(alert())).toBe("Preparation taking longer");
+    expect(getAlertTitle(alert({ title: null, type: "paid_order_stuck" }))).toBe("Payment");
+    expect(getAlertTitle(alert({ title: null, type: "high_demand" }))).toBe("High demand");
   });
 });
 

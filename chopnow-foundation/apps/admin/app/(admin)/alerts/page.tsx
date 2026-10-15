@@ -22,6 +22,13 @@ export default async function AlertsPage() {
       .limit(20),
   ]);
 
+  // null = healthy, or unknown (e.g. migration 0013 not applied yet): show nothing.
+  let schedulerProblem: string | null = null;
+  const { data: scheduler } = await supabase.rpc("operational_alerts_scheduler_status");
+  if (scheduler && scheduler.running === false) {
+    schedulerProblem = scheduler.reason ? `Reason: ${scheduler.reason}` : "The scheduled job is not running";
+  }
+
   const orderIds = [...new Set([...(activeAlerts ?? []), ...(resolvedAlerts ?? [])].map((a) => a.order_id).filter((id): id is string => !!id))];
   const orderNumberById: Record<string, string> = {};
   if (orderIds.length > 0) {
@@ -42,6 +49,7 @@ export default async function AlertsPage() {
         initialActiveAlerts={(activeAlerts ?? []) as AlertRow[]}
         initialResolvedAlerts={(resolvedAlerts ?? []) as AlertRow[]}
         initialOrderNumbers={orderNumberById}
+        schedulerProblem={schedulerProblem}
       />
     </div>
   );

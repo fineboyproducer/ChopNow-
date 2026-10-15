@@ -39,6 +39,7 @@ function StatCard({
   value: string | number;
   tone?: "default" | "success" | "warning" | "destructive";
 }) {
+  const display = typeof value === "number" ? value.toLocaleString("en-NG") : value;
   const toneClasses = {
     default: "bg-accent text-primary",
     success: "bg-success/10 text-success",
@@ -51,7 +52,16 @@ function StatCard({
       <div className={`mb-3 flex h-9 w-9 items-center justify-center rounded-lg ${toneClasses}`}>
         <Icon size={16} />
       </div>
-      <p className="break-words text-xl font-black tracking-tight text-foreground sm:text-2xl">{value}</p>
+      {/* Scales with the viewport so ₦ amounts stay on one line down to 320px
+          instead of wrapping mid-number; ellipsis is a last resort for absurdly
+          large figures, with the full value in the tooltip. */}
+      <p
+        title={String(display)}
+        className="overflow-hidden text-ellipsis whitespace-nowrap font-black tabular-nums tracking-tight text-foreground"
+        style={{ fontSize: "clamp(1rem, 5vw, 1.5rem)" }}
+      >
+        {display}
+      </p>
       <p className="mt-0.5 text-[11px] text-muted-foreground">{label}</p>
     </Card>
   );

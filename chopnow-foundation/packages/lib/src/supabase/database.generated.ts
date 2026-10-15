@@ -209,6 +209,8 @@ export interface Database {
           estimated_delivery_minutes: number | null;
           placed_at: string;
           delivered_at: string | null;
+          /** When payment_status first became "paid" (set by trigger, null on older orders). */
+          paid_at: string | null;
           rider_earnings: number | null;
           cancelled_reason: string | null;
           created_at: string;
@@ -235,6 +237,7 @@ export interface Database {
           estimated_delivery_minutes?: number | null;
           placed_at?: string;
           delivered_at?: string | null;
+          paid_at?: string | null;
           rider_earnings?: number | null;
           cancelled_reason?: string | null;
           created_at?: string;
@@ -333,12 +336,14 @@ export interface Database {
           /** Seconds in stage before an alert fires; null = no alert for this stage. */
           alert_after_seconds: number | null;
           alert_severity: "red" | "amber" | "blue";
+          alert_label: string | null;
         };
         Insert: {
           stage: OrderStatusEnum;
           sla_seconds: number;
           alert_after_seconds?: number | null;
           alert_severity?: "red" | "amber" | "blue";
+          alert_label?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["stage_sla_config"]["Insert"]>;
         Relationships: [];
@@ -400,7 +405,8 @@ export interface Database {
             | "payment_failed"
             | "order_cancelled"
             | "high_demand"
-            | "rider_delay";
+            | "rider_delay"
+            | "paid_order_stuck";
           severity: "red" | "amber" | "blue";
           message: string;
           order_id: string | null;
@@ -411,6 +417,8 @@ export interface Database {
           resolved_by: string | null;
           /** Set only on system-generated alerts; one value per incident. */
           incident_key: string | null;
+          /** Headline for system-generated alerts (null on hand-made ones). */
+          title: string | null;
         };
         Insert: {
           id?: string;
@@ -423,7 +431,8 @@ export interface Database {
             | "payment_failed"
             | "order_cancelled"
             | "high_demand"
-            | "rider_delay";
+            | "rider_delay"
+            | "paid_order_stuck";
           severity: "red" | "amber" | "blue";
           message: string;
           order_id?: string | null;
@@ -433,6 +442,7 @@ export interface Database {
           resolved_at?: string | null;
           resolved_by?: string | null;
           incident_key?: string | null;
+          title?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["alerts"]["Insert"]>;
         Relationships: [];
@@ -498,6 +508,11 @@ export interface Database {
         Args: Record<string, never>;
         Returns: { created: number; reopened: number; resolved: number };
       };
+      /** Staff only. running=false includes a human-readable reason. */
+      operational_alerts_scheduler_status: {
+        Args: Record<string, never>;
+        Returns: { running: boolean; reason?: string; schedule?: string; last_run_at?: string };
+      };
     };
     Enums: {
       user_role: UserRole;
@@ -514,7 +529,8 @@ export interface Database {
         | "payment_failed"
         | "order_cancelled"
         | "high_demand"
-        | "rider_delay";
+        | "rider_delay"
+        | "paid_order_stuck";
     };
     CompositeTypes: Record<string, never>;
   };

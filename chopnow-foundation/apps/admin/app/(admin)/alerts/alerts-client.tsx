@@ -3,12 +3,12 @@
 import * as React from "react";
 import type { ElementType } from "react";
 import Link from "next/link";
-import { AlertTriangle, Bike, Store, CreditCard, XCircle, TrendingUp, Clock, Check, RefreshCw } from "lucide-react";
+import { AlertTriangle, Bike, Store, CreditCard, XCircle, TrendingUp, Clock, Check, RefreshCw, Banknote } from "lucide-react";
 import { Card, Button, EmptyState } from "@chopnow/ui";
 import { createSupabaseBrowserClient, timeAgo, formatDateTime, cn } from "@chopnow/lib";
 import { resolveAlertAction, runAlertCheckAction } from "@/lib/actions/alerts";
 import {
-  ALERT_SEVERITY_LABELS, ALERT_TYPE_LABELS, applyAlertChange, getAlertState, type AlertRow,
+  ALERT_SEVERITY_LABELS, ALERT_TYPE_LABELS, applyAlertChange, getAlertState, getAlertTitle, type AlertRow,
 } from "@/lib/alerts/alert-meta";
 
 const TYPE_ICON: Record<AlertRow["type"], ElementType> = {
@@ -16,6 +16,7 @@ const TYPE_ICON: Record<AlertRow["type"], ElementType> = {
   no_rider_accepted: Bike,
   rider_delay: Bike,
   customer_wait_exceeded: Clock,
+  paid_order_stuck: Banknote,
   restaurant_offline: Store,
   rider_offline_midway: Bike,
   payment_failed: CreditCard,
@@ -64,9 +65,12 @@ function AlertCard({
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[12.5px] font-extrabold text-foreground">{ALERT_TYPE_LABELS[alert.type] ?? alert.type}</span>
+            <span className="text-[12.5px] font-extrabold text-foreground">{getAlertTitle(alert)}</span>
             <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold", tone.bg, tone.fg)}>
               {ALERT_SEVERITY_LABELS[alert.severity]}
+            </span>
+            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+              {ALERT_TYPE_LABELS[alert.type] ?? alert.type}
             </span>
             <span
               className={cn(
@@ -105,10 +109,13 @@ export function AlertsClient({
   initialActiveAlerts,
   initialResolvedAlerts,
   initialOrderNumbers,
+  schedulerProblem,
 }: {
   initialActiveAlerts: AlertRow[];
   initialResolvedAlerts: AlertRow[];
   initialOrderNumbers: Record<string, string>;
+  /** Set when automatic generation is not running; null/undefined when healthy or unknown. */
+  schedulerProblem?: string | null;
 }) {
   const [lists, setLists] = React.useState({ active: initialActiveAlerts, resolved: initialResolvedAlerts });
   const [orderNumbers, setOrderNumbers] = React.useState(initialOrderNumbers);
@@ -165,6 +172,15 @@ export function AlertsClient({
 
   return (
     <div className="space-y-5">
+      {schedulerProblem && (
+        <Card className="border-warning/40 bg-warning/10 p-3.5">
+          <p className="text-[12.5px] font-extrabold text-foreground">Automatic alert checks are not running</p>
+          <p className="mt-0.5 text-[12px] text-muted-foreground">
+            {schedulerProblem}. New alerts will only appear when someone presses &ldquo;Check now&rdquo; until the
+            scheduled job is fixed (see the bottom of migration 0013).
+          </p>
+        </Card>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" variant="outline" onClick={handleCheckNow} disabled={checking}>
           <RefreshCw size={12} className={checking ? "animate-spin" : ""} /> {checking ? "Checking..." : "Check now"}

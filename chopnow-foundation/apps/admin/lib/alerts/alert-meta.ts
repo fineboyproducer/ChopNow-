@@ -3,11 +3,17 @@ import type { Database } from "@chopnow/lib/supabase/database.generated";
 export type AlertRow = Database["public"]["Tables"]["alerts"]["Row"];
 export type AlertType = AlertRow["type"];
 
+/**
+ * Category chip shown next to an alert's headline. For the automated alerts
+ * these name the part of the flow involved, not who is at fault: there is no
+ * restaurant app, so a restaurant-stage alert means ops needs to act.
+ */
 export const ALERT_TYPE_LABELS: Record<AlertType, string> = {
-  restaurant_delay: "Restaurant delay",
-  no_rider_accepted: "Awaiting rider",
-  rider_delay: "Rider delay",
-  customer_wait_exceeded: "Delivery overdue",
+  restaurant_delay: "Restaurant stage",
+  no_rider_accepted: "Dispatch",
+  rider_delay: "Delivery",
+  customer_wait_exceeded: "Customer wait",
+  paid_order_stuck: "Payment",
   restaurant_offline: "Restaurant offline",
   rider_offline_midway: "Rider offline mid-delivery",
   payment_failed: "Payment failed",
@@ -20,6 +26,11 @@ export const ALERT_SEVERITY_LABELS: Record<AlertRow["severity"], string> = {
   amber: "Warning",
   blue: "Info",
 };
+
+/** Headline: the generator's title when present, otherwise the category label. */
+export function getAlertTitle(alert: Pick<AlertRow, "title" | "type">): string {
+  return alert.title ?? ALERT_TYPE_LABELS[alert.type] ?? alert.type;
+}
 
 export type AlertState = "active" | "auto_resolved" | "resolved_by_staff";
 
