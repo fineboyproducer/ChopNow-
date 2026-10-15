@@ -22,18 +22,26 @@ export default async function AlertsPage() {
       .limit(20),
   ]);
 
+  const orderIds = [...new Set([...(activeAlerts ?? []), ...(resolvedAlerts ?? [])].map((a) => a.order_id).filter((id): id is string => !!id))];
+  const orderNumberById: Record<string, string> = {};
+  if (orderIds.length > 0) {
+    const { data: orders } = await supabase.from("orders").select("id, order_number").in("id", orderIds);
+    for (const o of orders ?? []) orderNumberById[o.id] = o.order_number;
+  }
+
   return (
     <div className="space-y-5 p-4 sm:p-6">
       <div>
         <h1 className="text-lg font-extrabold text-foreground">Alerts</h1>
         <p className="text-[12px] text-muted-foreground">
-          Real-time operational alerts, per PRD Section 11.4. Color-coded by severity.
+          Raised automatically every minute when an order is stuck or overdue, and cleared when it moves on.
         </p>
       </div>
 
       <AlertsClient
         initialActiveAlerts={(activeAlerts ?? []) as AlertRow[]}
         initialResolvedAlerts={(resolvedAlerts ?? []) as AlertRow[]}
+        initialOrderNumbers={orderNumberById}
       />
     </div>
   );

@@ -2,17 +2,19 @@
 
 import * as React from "react";
 import type { ElementType } from "react";
-import { AlertTriangle, Bike, Store, CreditCard, XCircle, TrendingUp, Clock, Check } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, Bike, Store, CreditCard, XCircle, TrendingUp, Clock, Check, RefreshCw } from "lucide-react";
 import { Card, Button, EmptyState } from "@chopnow/ui";
-import { createSupabaseBrowserClient, timeAgo, cn } from "@chopnow/lib";
-import type { Database } from "@chopnow/lib/supabase/database.generated";
-import { resolveAlertAction } from "@/lib/actions/alerts";
-
-type AlertRow = Database["public"]["Tables"]["alerts"]["Row"];
+import { createSupabaseBrowserClient, timeAgo, formatDateTime, cn } from "@chopnow/lib";
+import { resolveAlertAction, runAlertCheckAction } from "@/lib/actions/alerts";
+import {
+  ALERT_SEVERITY_LABELS, ALERT_TYPE_LABELS, applyAlertChange, getAlertState, type AlertRow,
+} from "@/lib/alerts/alert-meta";
 
 const TYPE_ICON: Record<AlertRow["type"], ElementType> = {
   restaurant_delay: AlertTriangle,
   no_rider_accepted: Bike,
+  rider_delay: Bike,
   customer_wait_exceeded: Clock,
   restaurant_offline: Store,
   rider_offline_midway: Bike,
@@ -27,9 +29,24 @@ const SEVERITY_CLASSES: Record<AlertRow["severity"], { bg: string; fg: string; b
   blue: { bg: "bg-info/10", fg: "text-info", border: "border-info/30" },
 };
 
-function AlertCard({ alert, onResolve }: { alert: AlertRow; onResolve?: (id: string) => void }) {
+const STATE_LABEL = {
+  active: "Active",
+  auto_resolved: "Resolved automatically",
+  resolved_by_staff: "Resolved by staff",
+} as const;
+
+function AlertCard({
+  alert,
+  orderNumber,
+  onResolve,
+}: {
+  alert: AlertRow;
+  orderNumber?: string;
+  onResolve?: (id: string) => void;
+}) {
   const Icon = TYPE_ICON[alert.type] ?? AlertTriangle;
   const tone = SEVERITY_CLASSES[alert.severity];
+  const state = getAlertState(alert);
   const [resolving, setResolving] = React.useState(false);
 
   const handleResolve = async () => {
@@ -40,21 +57,45 @@ function AlertCard({ alert, onResolve }: { alert: AlertRow; onResolve?: (id: str
   };
 
   return (
-    <Card className={cn("flex items-center gap-3 border p-3.5", tone.border)}>
-      <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", tone.bg)}>
-        <Icon size={16} className={tone.fg} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[13px] text-foreground">{alert.message}</p>
-        <p className="text-[11px] text-muted-foreground">
-          {timeAgo(alert.created_at)}
-          {alert.resolved_at && ` · Resolved ${timeAgo(alert.resolved_at)}`}
-        </p>
+    <Card className={cn("border p-3.5", tone.border)}>
+      <div className="flex items-start gap-3">
+        <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", tone.bg)}>
+          <Icon size={16} className={tone.fg} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[12.5px] font-extrabold text-foreground">{ALERT_TYPE_LABELS[alert.type] ?? alert.type}</span>
+            <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold", tone.bg, tone.fg)}>
+              {ALERT_SEVERITY_LABELS[alert.severity]}
+            </span>
+            <span
+              className={cn(
+                "rounded-full px-2 py-0.5 text-[10px] font-bold",
+                state === "active" ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success",
+              )}
+            >
+              {STATE_LABEL[state]}
+            </span>
+          </div>
+          <p className="mt-1 break-words text-[13px] text-foreground">{alert.message}</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            {alert.order_id && (
+              <Link href={`/orders?highlight=${alert.order_id}`} className="font-bold text-primary hover:underline">
+                {orderNumber ?? "View order"}
+              </Link>
+            )}
+            {alert.order_id && " · "}
+            <span title={formatDateTime(alert.created_at)}>Raised {timeAgo(alert.created_at)}</span>
+            {alert.resolved_at && <> · Resolved {timeAgo(alert.resolved_at)}</>}
+          </p>
+        </div>
       </div>
       {onResolve && (
-        <Button size="sm" variant="ghost" onClick={handleResolve} disabled={resolving}>
-          <Check size={12} /> {resolving ? "..." : "Resolve"}
-        </Button>
+        <div className="mt-3 flex sm:justify-end">
+          <Button size="sm" variant="ghost" className="w-full sm:w-auto" onClick={handleResolve} disabled={resolving}>
+            <Check size={12} /> {resolving ? "..." : "Resolve"}
+          </Button>
+        </div>
       )}
     </Card>
   );
@@ -63,33 +104,39 @@ function AlertCard({ alert, onResolve }: { alert: AlertRow; onResolve?: (id: str
 export function AlertsClient({
   initialActiveAlerts,
   initialResolvedAlerts,
+  initialOrderNumbers,
 }: {
   initialActiveAlerts: AlertRow[];
   initialResolvedAlerts: AlertRow[];
+  initialOrderNumbers: Record<string, string>;
 }) {
-  const [active, setActive] = React.useState(initialActiveAlerts);
-  const [resolved, setResolved] = React.useState(initialResolvedAlerts);
+  const [lists, setLists] = React.useState({ active: initialActiveAlerts, resolved: initialResolvedAlerts });
+  const [orderNumbers, setOrderNumbers] = React.useState(initialOrderNumbers);
+  const [checking, setChecking] = React.useState(false);
+  const [checkMessage, setCheckMessage] = React.useState<string | null>(null);
+  const { active, resolved } = lists;
 
   React.useEffect(() => {
     const supabase = createSupabaseBrowserClient();
+    const onChange = (payload: { new: unknown }) => {
+      const row = payload.new as AlertRow;
+      setLists((prev) => applyAlertChange(prev, row));
+      if (row.order_id) {
+        const orderId = row.order_id;
+        supabase
+          .from("orders")
+          .select("order_number")
+          .eq("id", orderId)
+          .maybeSingle()
+          .then(({ data }) => {
+            if (data) setOrderNumbers((prev) => (prev[orderId] ? prev : { ...prev, [orderId]: data.order_number }));
+          });
+      }
+    };
     const channel = supabase
       .channel("ops-alerts")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "alerts" },
-        (payload) => setActive((prev) => [payload.new as AlertRow, ...prev]),
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "alerts" },
-        (payload) => {
-          const updated = payload.new as AlertRow;
-          if (updated.resolved_at) {
-            setActive((prev) => prev.filter((a) => a.id !== updated.id));
-            setResolved((prev) => [updated, ...prev].slice(0, 20));
-          }
-        },
-      )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "alerts" }, onChange)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "alerts" }, onChange)
       .subscribe();
 
     return () => {
@@ -98,15 +145,33 @@ export function AlertsClient({
   }, []);
 
   const handleResolvedLocally = (id: string) => {
-    setActive((prev) => {
-      const found = prev.find((a) => a.id === id);
-      if (found) setResolved((r) => [{ ...found, resolved_at: new Date().toISOString() }, ...r].slice(0, 20));
-      return prev.filter((a) => a.id !== id);
+    setLists((prev) => {
+      const found = prev.active.find((a) => a.id === id);
+      return found ? applyAlertChange(prev, { ...found, resolved_at: new Date().toISOString(), resolved_by: found.resolved_by ?? "me" }) : prev;
     });
+  };
+
+  const handleCheckNow = async () => {
+    setChecking(true);
+    setCheckMessage(null);
+    const result = await runAlertCheckAction();
+    setChecking(false);
+    setCheckMessage(
+      result.success
+        ? `Check complete: ${result.data.created} new, ${result.data.reopened} reopened, ${result.data.resolved} cleared.`
+        : result.error.message,
+    );
   };
 
   return (
     <div className="space-y-5">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button size="sm" variant="outline" onClick={handleCheckNow} disabled={checking}>
+          <RefreshCw size={12} className={checking ? "animate-spin" : ""} /> {checking ? "Checking..." : "Check now"}
+        </Button>
+        {checkMessage && <p className="text-[11.5px] text-muted-foreground">{checkMessage}</p>}
+      </div>
+
       <div>
         <p className="mb-3 text-[12px] font-bold uppercase tracking-wide text-muted-foreground">
           Active ({active.length})
@@ -115,12 +180,17 @@ export function AlertsClient({
           <EmptyState
             icon={Check}
             title="No active alerts"
-            description="Operations are running smoothly — alerts will appear here in real time as they fire."
+            description="Nothing is overdue. Alerts are raised automatically when an order is stuck, and appear here in real time."
           />
         ) : (
           <div className="space-y-2">
             {active.map((alert) => (
-              <AlertCard key={alert.id} alert={alert} onResolve={handleResolvedLocally} />
+              <AlertCard
+                key={alert.id}
+                alert={alert}
+                orderNumber={alert.order_id ? orderNumbers[alert.order_id] : undefined}
+                onResolve={handleResolvedLocally}
+              />
             ))}
           </div>
         )}
@@ -133,7 +203,11 @@ export function AlertsClient({
           </p>
           <div className="space-y-2 opacity-70">
             {resolved.map((alert) => (
-              <AlertCard key={alert.id} alert={alert} />
+              <AlertCard
+                key={alert.id}
+                alert={alert}
+                orderNumber={alert.order_id ? orderNumbers[alert.order_id] : undefined}
+              />
             ))}
           </div>
         </div>

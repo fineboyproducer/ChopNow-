@@ -330,10 +330,15 @@ export interface Database {
         Row: {
           stage: OrderStatusEnum;
           sla_seconds: number;
+          /** Seconds in stage before an alert fires; null = no alert for this stage. */
+          alert_after_seconds: number | null;
+          alert_severity: "red" | "amber" | "blue";
         };
         Insert: {
           stage: OrderStatusEnum;
           sla_seconds: number;
+          alert_after_seconds?: number | null;
+          alert_severity?: "red" | "amber" | "blue";
         };
         Update: Partial<Database["public"]["Tables"]["stage_sla_config"]["Insert"]>;
         Relationships: [];
@@ -394,7 +399,8 @@ export interface Database {
             | "rider_offline_midway"
             | "payment_failed"
             | "order_cancelled"
-            | "high_demand";
+            | "high_demand"
+            | "rider_delay";
           severity: "red" | "amber" | "blue";
           message: string;
           order_id: string | null;
@@ -403,6 +409,8 @@ export interface Database {
           created_at: string;
           resolved_at: string | null;
           resolved_by: string | null;
+          /** Set only on system-generated alerts; one value per incident. */
+          incident_key: string | null;
         };
         Insert: {
           id?: string;
@@ -414,7 +422,8 @@ export interface Database {
             | "rider_offline_midway"
             | "payment_failed"
             | "order_cancelled"
-            | "high_demand";
+            | "high_demand"
+            | "rider_delay";
           severity: "red" | "amber" | "blue";
           message: string;
           order_id?: string | null;
@@ -423,6 +432,7 @@ export interface Database {
           created_at?: string;
           resolved_at?: string | null;
           resolved_by?: string | null;
+          incident_key?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["alerts"]["Insert"]>;
         Relationships: [];
@@ -482,7 +492,13 @@ export interface Database {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      /** Runs the alert rules now. Staff only. Returns {created, reopened, resolved}. */
+      generate_operational_alerts: {
+        Args: Record<string, never>;
+        Returns: { created: number; reopened: number; resolved: number };
+      };
+    };
     Enums: {
       user_role: UserRole;
       restaurant_status: RestaurantStatus;
@@ -497,7 +513,8 @@ export interface Database {
         | "rider_offline_midway"
         | "payment_failed"
         | "order_cancelled"
-        | "high_demand";
+        | "high_demand"
+        | "rider_delay";
     };
     CompositeTypes: Record<string, never>;
   };

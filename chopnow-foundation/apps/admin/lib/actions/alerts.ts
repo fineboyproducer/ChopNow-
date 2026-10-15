@@ -30,3 +30,26 @@ export async function resolveAlertAction(alertId: string): Promise<ApiResponse<n
     return { success: false, error: { code: appError.code, message: appError.message } };
   }
 }
+
+/** Runs the alert rules immediately (same function pg_cron runs every minute). */
+export async function runAlertCheckAction(): Promise<
+  ApiResponse<{ created: number; reopened: number; resolved: number }>
+> {
+  try {
+    const cookieStore = await cookies();
+    const supabase = createSupabaseServerClient(cookieStore);
+    const user = await getAuthenticatedUser(supabase);
+    requireRole(user, "admin", "dispatcher");
+
+    const { data, error } = await supabase.rpc("generate_operational_alerts");
+    if (error) throw toAppError(error);
+
+    revalidatePath("/alerts");
+    revalidatePath("/dashboard");
+    return { success: true, data: data as { created: number; reopened: number; resolved: number } };
+  } catch (err) {
+    const appError = toAppError(err);
+    log.error("runAlertCheckAction failed", appError);
+    return { success: false, error: { code: appError.code, message: appError.message } };
+  }
+}
