@@ -18,7 +18,12 @@ import { uuid_ossp } from "@electric-sql/pglite/contrib/uuid_ossp";
  */
 const MIGRATIONS_DIR = path.resolve(__dirname, "../../../../supabase/migrations");
 
-export async function createTestDb(): Promise<PGlite> {
+export interface TestDbOptions {
+  /** SQL to run just before the named migration file (e.g. to simulate production drift). */
+  beforeMigration?: Record<string, string>;
+}
+
+export async function createTestDb(opts: TestDbOptions = {}): Promise<PGlite> {
   const db = new PGlite({ extensions: { cube, earthdistance, uuid_ossp } });
   await db.exec(`
     create role anon nologin;
@@ -47,6 +52,8 @@ export async function createTestDb(): Promise<PGlite> {
       // its function is stubbed above.
       .replace(/create extension if not exists moddatetime[^;]*;/i, "");
     try {
+      const pre = opts.beforeMigration?.[file];
+      if (pre) await db.exec(pre);
       await db.exec(sql);
     } catch (err) {
       throw new Error(`Migration ${file} failed: ${(err as Error).message}`);

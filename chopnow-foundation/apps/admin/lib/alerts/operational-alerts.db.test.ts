@@ -53,11 +53,11 @@ async function run(afterMs = 0) {
 
 interface AlertRowT {
   id: string; type: string; severity: string; title: string; message: string;
-  resolved_at: string | null; resolved_by: string | null; incident_key: string;
+  resolved_at: string | null; resolved_by: string | null; incident_key: string; resolution_reason: string | null;
 }
 const alertsFor = (orderId: string) =>
   q<AlertRowT>(
-    `select id, type::text, severity, title, message, resolved_at, resolved_by, incident_key
+    `select id, type::text, severity, title, message, resolved_at, resolved_by, incident_key, resolution_reason
        from alerts where order_id = $1 order by created_at, id`,
     [orderId],
   );
@@ -344,6 +344,58 @@ describe("noise control: overlapping alerts for one slow order", () => {
     const res = await run(61 * MIN);
     expect(res).toMatchObject({ created: 1, resolved: 1 });
     expect((await activeFor(id)).map((a) => a.title)).toEqual(["Customer waiting too long"]);
+  });
+
+  it("marks the folded stage alert 'superseded' (not cleared) and says so on the red alert, once", async () => {
+    const id = await newOrder("new");
+    await paystackWebhook(id);
+    await setStatus(id, "restaurant_accepted");
+    await setStatus(id, "preparing");
+    await run(31 * MIN);
+    expect((await alertsFor(id))[0]!.resolution_reason).toBeNull();
+
+    await run(61 * MIN);
+    await run(62 * MIN);
+    await run(63 * MIN); // reruns must not duplicate the note
+    const all = await alertsFor(id);
+    const stage = all.find((a) => a.type === "restaurant_delay")!;
+    expect(stage).toMatchObject({ resolution_reason: "superseded", resolved_by: null });
+    expect(stage.resolved_at).not.toBeNull();
+
+    const win = all.find((a) => a.type === "customer_wait_exceeded")!;
+    expect(win.resolved_at).toBeNull();
+    expect(win.message).toContain('"Preparation taking longer" alert for this order was folded into this one');
+    expect(win.message).toContain("The order is still delayed");
+    expect(win.message.match(/folded into this one/g)).toHaveLength(1);
+  });
+
+  it("a stage alert that clears because the order moved on is NOT marked superseded", async () => {
+    const id = await newOrder("restaurant_notified");
+    await run(6 * MIN);
+    await setStatus(id, "restaurant_accepted");
+    await run(7 * MIN);
+    const [a] = await alertsFor(id);
+    expect(a!.resolved_at).not.toBeNull();
+    expect(a!.resolution_reason).toBeNull();
+  });
+
+  it("a red stage alert (Rider needed) is never superseded by the customer-waiting alert", async () => {
+    const id = await newOrder("new");
+    await paystackWebhook(id);
+    await setStatus(id, "ready_for_pickup");
+    await run(70 * MIN);
+    const rider = (await alertsFor(id)).find((a) => a.type === "no_rider_accepted")!;
+    expect(rider.resolved_at).toBeNull();
+    expect(rider.resolution_reason).toBeNull();
+  });
+
+  it("the red alert carries no folded-note when nothing was folded into it", async () => {
+    const id = await newOrder("new");
+    await paystackWebhook(id);
+    await setStatus(id, "ready_for_pickup");
+    await run(70 * MIN);
+    const win = (await alertsFor(id)).find((a) => a.type === "customer_wait_exceeded")!;
+    expect(win.message).not.toContain("folded into this one");
   });
 
   it("keeps genuinely different problems separate: 'Rider needed' and 'Customer waiting too long' together", async () => {

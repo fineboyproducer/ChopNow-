@@ -8,7 +8,7 @@ import { Card, Button, EmptyState } from "@chopnow/ui";
 import { createSupabaseBrowserClient, timeAgo, formatDateTime, cn } from "@chopnow/lib";
 import { resolveAlertAction, runAlertCheckAction } from "@/lib/actions/alerts";
 import {
-  ALERT_SEVERITY_LABELS, ALERT_TYPE_LABELS, applyAlertChange, getAlertState, getAlertTitle, type AlertRow,
+  ALERT_SEVERITY_LABELS, ALERT_STATE_LABELS, ALERT_TYPE_LABELS, SUPERSEDED_EXPLANATION, applyAlertChange, getAlertState, getAlertTitle, type AlertRow,
 } from "@/lib/alerts/alert-meta";
 
 const TYPE_ICON: Record<AlertRow["type"], ElementType> = {
@@ -29,12 +29,6 @@ const SEVERITY_CLASSES: Record<AlertRow["severity"], { bg: string; fg: string; b
   amber: { bg: "bg-warning/10", fg: "text-warning", border: "border-warning/30" },
   blue: { bg: "bg-info/10", fg: "text-info", border: "border-info/30" },
 };
-
-const STATE_LABEL = {
-  active: "Active",
-  auto_resolved: "Resolved automatically",
-  resolved_by_staff: "Resolved by staff",
-} as const;
 
 function AlertCard({
   alert,
@@ -75,13 +69,20 @@ function AlertCard({
             <span
               className={cn(
                 "rounded-full px-2 py-0.5 text-[10px] font-bold",
-                state === "active" ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success",
+                state === "active"
+                  ? "bg-destructive/10 text-destructive"
+                  : state === "superseded"
+                    ? "bg-warning/10 text-warning"
+                    : "bg-success/10 text-success",
               )}
             >
-              {STATE_LABEL[state]}
+              {ALERT_STATE_LABELS[state]}
             </span>
           </div>
           <p className="mt-1 break-words text-[13px] text-foreground">{alert.message}</p>
+          {state === "superseded" && (
+            <p className="mt-1 text-[12px] font-semibold text-warning">{SUPERSEDED_EXPLANATION}</p>
+          )}
           <p className="mt-1 text-[11px] text-muted-foreground">
             {alert.order_id && (
               <Link href={`/orders?highlight=${alert.order_id}`} className="font-bold text-primary hover:underline">
@@ -90,7 +91,9 @@ function AlertCard({
             )}
             {alert.order_id && " · "}
             <span title={formatDateTime(alert.created_at)}>Raised {timeAgo(alert.created_at)}</span>
-            {alert.resolved_at && <> · Resolved {timeAgo(alert.resolved_at)}</>}
+            {alert.resolved_at && (
+              <> · {state === "superseded" ? "Superseded" : "Resolved"} {timeAgo(alert.resolved_at)}</>
+            )}
           </p>
         </div>
       </div>

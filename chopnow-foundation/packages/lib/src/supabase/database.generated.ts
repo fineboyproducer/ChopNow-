@@ -419,6 +419,8 @@ export interface Database {
           incident_key: string | null;
           /** Headline for system-generated alerts (null on hand-made ones). */
           title: string | null;
+          /** 'superseded' = folded into the customer-waiting alert (delay not resolved). */
+          resolution_reason: string | null;
         };
         Insert: {
           id?: string;
@@ -443,6 +445,7 @@ export interface Database {
           resolved_by?: string | null;
           incident_key?: string | null;
           title?: string | null;
+          resolution_reason?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["alerts"]["Insert"]>;
         Relationships: [];

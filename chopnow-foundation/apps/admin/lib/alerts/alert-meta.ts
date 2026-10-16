@@ -32,16 +32,31 @@ export function getAlertTitle(alert: Pick<AlertRow, "title" | "type">): string {
   return alert.title ?? ALERT_TYPE_LABELS[alert.type] ?? alert.type;
 }
 
-export type AlertState = "active" | "auto_resolved" | "resolved_by_staff";
+export type AlertState = "active" | "auto_resolved" | "superseded" | "resolved_by_staff";
 
 /**
  * resolved_by is set only when a person resolves an alert; the generator
  * (0013) leaves it null when it closes one because the incident cleared.
  */
-export function getAlertState(alert: Pick<AlertRow, "resolved_at" | "resolved_by">): AlertState {
+export function getAlertState(
+  alert: Pick<AlertRow, "resolved_at" | "resolved_by" | "resolution_reason">,
+): AlertState {
   if (!alert.resolved_at) return "active";
-  return alert.resolved_by ? "resolved_by_staff" : "auto_resolved";
+  if (alert.resolved_by) return "resolved_by_staff";
+  // Folded into the red "Customer waiting too long" alert: NOT cleared.
+  return alert.resolution_reason === "superseded" ? "superseded" : "auto_resolved";
 }
+
+/** Chip text and explanation per state. A superseded alert is deliberately not "resolved". */
+export const ALERT_STATE_LABELS: Record<AlertState, string> = {
+  active: "Active",
+  auto_resolved: "Resolved automatically",
+  superseded: "Superseded by Customer waiting too long",
+  resolved_by_staff: "Resolved by staff",
+};
+
+export const SUPERSEDED_EXPLANATION =
+  "This alert was folded into the red \"Customer waiting too long\" alert for the same order. The order is still delayed; follow that alert.";
 
 export interface AlertLists {
   active: AlertRow[];

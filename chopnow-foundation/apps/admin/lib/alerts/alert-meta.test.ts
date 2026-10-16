@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { applyAlertChange, getAlertState, getAlertTitle, type AlertRow } from "./alert-meta";
+import { ALERT_STATE_LABELS, SUPERSEDED_EXPLANATION, applyAlertChange, getAlertState, getAlertTitle, type AlertRow } from "./alert-meta";
 
 const alert = (over: Partial<AlertRow> = {}): AlertRow => ({
   id: "a1", type: "restaurant_delay", severity: "amber", message: "m", order_id: "o1",
   restaurant_id: null, rider_id: null, created_at: "2026-10-15T08:00:00Z",
-  resolved_at: null, resolved_by: null, incident_key: "stage:preparing:1", title: "Preparation taking longer", ...over,
+  resolved_at: null, resolved_by: null, incident_key: "stage:preparing:1", title: "Preparation taking longer", resolution_reason: null, ...over,
 });
 
 describe("getAlertState", () => {
@@ -12,6 +12,15 @@ describe("getAlertState", () => {
     expect(getAlertState(alert())).toBe("active");
     expect(getAlertState(alert({ resolved_at: "2026-10-15T09:00:00Z" }))).toBe("auto_resolved");
     expect(getAlertState(alert({ resolved_at: "2026-10-15T09:00:00Z", resolved_by: "u1" }))).toBe("resolved_by_staff");
+    expect(getAlertState(alert({ resolved_at: "2026-10-15T09:00:00Z", resolution_reason: "superseded" }))).toBe("superseded");
+    // a human resolution always wins over the reason
+    expect(getAlertState(alert({ resolved_at: "2026-10-15T09:00:00Z", resolved_by: "u1", resolution_reason: "superseded" }))).toBe("resolved_by_staff");
+  });
+
+  it("labels a superseded alert distinctly and never as resolved", () => {
+    expect(ALERT_STATE_LABELS.superseded).toBe("Superseded by Customer waiting too long");
+    expect(ALERT_STATE_LABELS.superseded).not.toMatch(/resolved/i);
+    expect(SUPERSEDED_EXPLANATION).toMatch(/still delayed/);
   });
 });
 

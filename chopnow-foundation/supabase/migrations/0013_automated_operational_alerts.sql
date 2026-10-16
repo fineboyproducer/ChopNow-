@@ -68,7 +68,10 @@ begin
     --  picked_up                 10m    amber     Delivery status needs checking
     --  heading_to_customer       30m    amber     Delivery may be delayed
     --  delivered                 off
-    update stage_sla_config set alert_after_seconds = v.secs, alert_severity = v.sev, alert_label = v.label
+    -- greatest(): never below the stage's own sla_seconds, so the
+    -- stage_sla_alert_not_before_sla constraint holds even if production SLAs
+    -- were edited above the seeded alert thresholds. sla_seconds is not changed.
+    update stage_sla_config set alert_after_seconds = greatest(v.secs, sla_seconds), alert_severity = v.sev, alert_label = v.label
     from (values
       ('new',                       120, 'red',   'Paid order needs immediate attention'),
       ('payment_confirmed',         300, 'amber', 'Order needs attention'),
@@ -127,6 +130,18 @@ create trigger trg_set_paid_at
 -- ----------------------------------------------------------------------------
 alter table alerts add column if not exists incident_key text;
 alter table alerts add column if not exists title text;
+
+-- Why an auto-resolved alert was closed. 'superseded' = the incident is NOT
+-- over: it was folded into the red "Customer waiting too long" alert for the
+-- same order. NULL for everything else (staff-resolved, or really cleared).
+alter table alerts add column if not exists resolution_reason text;
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'alerts_resolution_reason_check') then
+    alter table alerts add constraint alerts_resolution_reason_check
+      check (resolution_reason is null or resolution_reason = 'superseded');
+  end if;
+end $$;
 
 create unique index if not exists uq_alerts_incident
   on alerts (order_id, type, incident_key)
@@ -305,7 +320,14 @@ begin
     select * from public.overdue_order_incidents(p_now);
 
   update alerts a
-     set resolved_at = p_now
+     set resolved_at = p_now,
+         -- A stage alert that disappears while the order's customer-waiting
+         -- incident is active was folded into it: the delay is NOT resolved.
+         resolution_reason = case
+           when a.type in ('restaurant_delay', 'rider_delay')
+                and exists (select 1 from _incidents w
+                            where w.order_id = a.order_id and w.alert_type = 'customer_wait_exceeded')
+           then 'superseded' else null end
    where a.resolved_at is null
      and a.incident_key is not null
      and not exists (
@@ -321,13 +343,29 @@ begin
     select i.alert_type::alert_type, i.severity, i.title, i.message, i.order_id, i.restaurant_id, i.rider_id, i.incident_key, p_now
     from _incidents i
     on conflict (order_id, type, incident_key) where incident_key is not null
-    do update set resolved_at = null, title = excluded.title, message = excluded.message, severity = excluded.severity
+    do update set resolved_at = null, resolution_reason = null, title = excluded.title, message = excluded.message, severity = excluded.severity
       where alerts.resolved_at is not null and alerts.resolved_by is null
     returning (xmax = 0) as inserted
   )
   select count(*) filter (where inserted), count(*) filter (where not inserted)
     into v_created, v_reopened
     from upserted;
+
+  -- Tell staff, on the red alert itself, that a stage alert was folded into it.
+  -- Idempotent: the marker phrase is only appended once.
+  update alerts w
+     set message = w.message || ' Note: the "' || f.titles
+                   || '" alert for this order was folded into this one. The order is still delayed.'
+    from (
+      select s.order_id, string_agg(distinct s.title, '", "') as titles
+      from alerts s
+      where s.resolution_reason = 'superseded' and s.resolved_at is not null
+      group by s.order_id
+    ) f
+   where w.order_id = f.order_id
+     and w.type = 'customer_wait_exceeded'
+     and w.resolved_at is null
+     and w.message not like '%folded into this one%';
 
   drop table _incidents;
 
@@ -424,13 +462,22 @@ grant execute on function public.overdue_order_incidents(timestamptz) to authent
 -- ----------------------------------------------------------------------------
 do $$
 begin
-  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
-     and not exists (
-       select 1 from pg_publication_tables
-       where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'alerts'
-     ) then
-    alter publication supabase_realtime add table public.alerts;
-  end if;
+  begin
+    if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+       and not exists (
+         select 1 from pg_publication_tables
+         where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'alerts'
+       ) then
+      alter publication supabase_realtime add table public.alerts;
+    end if;
+  exception when others then
+    -- Never abort the migration over Realtime. Alerts still work; the page
+    -- just won't update live until the publication is fixed (see "IF THE
+    -- REALTIME STEP FAILED" at the bottom of this file).
+    raise warning 'ChopNow alerts: could not add alerts to supabase_realtime (%: %). The rest of this migration was applied; live updates on the Alerts page are NOT enabled until it is fixed by hand.', sqlstate, sqlerrm;
+    insert into activity_log (category, severity, message)
+    values ('system', 'red', 'Alerts live updates are NOT enabled: could not add the alerts table to the supabase_realtime publication (' || sqlstate || ': ' || sqlerrm || '). The Alerts page needs a refresh to show new alerts until this is repaired.');
+  end;
 end $$;
 
 -- ----------------------------------------------------------------------------
@@ -522,3 +569,16 @@ end $$;
 -- 5. cron.job_run_details grows by about 1,440 rows a day; prune it now and then, e.g.
 --      delete from cron.job_run_details where end_time < now() - interval '7 days';
 -- ============================================================================
+
+-- ============================================================================
+-- IF THE REALTIME STEP FAILED (or to verify at any time)
+--
+-- Verify:
+--   select * from pg_publication_tables
+--    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'alerts';
+--   -- one row = live updates are on; no rows = not on
+-- Repair (either):
+--   alter publication supabase_realtime add table public.alerts;
+--   or Supabase dashboard -> Database -> Replication -> supabase_realtime -> toggle `alerts`.
+-- If the publication itself is missing: create publication supabase_realtime;  then repeat.
+-- Alerts are generated either way; only the live push to the page depends on this.
